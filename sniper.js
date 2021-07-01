@@ -78,6 +78,7 @@ async function getBalance(contract)
 		balance = await web3.eth.getBalance(wallet.account);
 	}
 	return [balance, getActualTokens(contract,balance)];
+	}
 	catch(e) {
         console.log(e);
 		return [0, 0];
