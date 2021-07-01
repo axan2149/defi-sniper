@@ -15,18 +15,18 @@
 	"matic":"0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
 	"//": "-------------Change below this----------",
 	"//": "-------------The contract add you want to buy ----------",
-	"toContract":"0x6bb45cEAC714c52342Ef73ec663479da35934bf7",
+	"toContract":"0x5C6014246FC7911F4dB270aA3910F23EECD61720",
 	"//": "-------------The contract add you want to buy with----------",
 	"fromContract":"0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
 	"account":"",
 	"key":"",
 	"rpc":"https://matic-mainnet.chainstacklabs.com",
 	"//": "-------------Total Amount you want buy with of the from contract----------",
-	"totalSpend":1,
+	"totalSpend":5,
 	"//": "-------------Amount you want buy with of the from contract per loop. For sniping this should be same as total spend----------",
 	"loopSpend":1,
 	"slippage":25,
 	"gwei":71,
 	"gas":815599,
-	"loopTimeInSeconds":1
+	"loopTimeInSeconds":5
 }

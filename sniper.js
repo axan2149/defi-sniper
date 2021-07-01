@@ -33,7 +33,10 @@ async function main() {
 main();  
 async function loop(){
 	try{
+		var count = await web3.eth.getTransactionCount(account,'pending');
+		console.log(count);
 	var result = await buy(wallet.loopSpend);
+	console.log("Buy Result " + result);
 	if(result)
 	{
 		totalSpent += wallet.loopSpend;
@@ -60,8 +63,11 @@ async function getContractInfo(contract)
 		console.log('The token decimal is: ' + decimal);
 		contract.decimals = decimal;
 		contract.name = name;
+		if(fromContract.address.trim().toLowerCase() == contract.address.trim().toLowerCase())
+		{
 		var allowanceResult = await checkAndApprove(contract);
 		if(!allowanceResult) return {"approval":allowanceResult};
+		}
 		var balance = await getBalance(contract);
 		console.log( contract.name +' balance - ' + balance[1]);
 	}
@@ -93,7 +99,8 @@ async function checkAndApprove(contract)
 			console.log('Allowance for contract is ' + allowance) ;
 			if(allowance <= 0)
 			{
-				var data = contract.methods.approve(wallet.routerAddress, 9007199254);
+				var data = contract.contract.methods.approve(wallet.routerAddress, 9007199254);
+				
 				await sendTransaction(contract.address,data,0);
 			}
 			return true;
@@ -113,21 +120,25 @@ async function buy(amt)
 	try{
 	console.log("Buying - " + toContract.name);
 	var amount = await wallet.router.methods.getAmountsOut
-	( amt, [fromContract.address,toContract.address]).call();
+	( amt*10000, [fromContract.address,toContract.address]).call();
 	console.log(amount);
 	if(!amount)
 	{
 		return false;
 	}
 	console.log(getWeiTokens(fromContract,amount[0]));
-	var invPrice = parseFloat(amount[1])/parseFloat(formatTokens(amount[0],Math.abs(fromContract.decimals -   toContract.decimals)));
-	var price = parseFloat(formatTokens(amount[0], Math.abs(fromContract.decimals -  toContract.decimals)))/parseFloat(amount[1]);
-	var inAmount = getWeiTokens(fromContract, parseFloat(amount[0]));
-	var outOgAmount = parseFloat(amount[1]);
+	var invPrice = parseFloat(amount[1])/
+	parseFloat(formatTokens(amount[0],
+	Math.abs(fromContract.decimals -   toContract.decimals)));
+	var price = parseFloat(formatTokens(amount[0], 
+	Math.abs(fromContract.decimals -  toContract.decimals)))/parseFloat(amount[1]);
+	var inAmount = parseFloat(amount[0]/10000);
+	var outOgAmount = parseFloat(amount[1]/10000);
 	console.log("Price " + price + " " + fromContract.name + " = 1 " + toContract.name);
 	console.log("Price " + invPrice + " " + toContract.name + " = 1 " + fromContract.name);
 	var outAmount = outOgAmount;
-	outAmount =  Math.floor((outAmount - (outAmount * wallet.slippage/100)));//*Math.pow(10,contractPairDecimal);
+	console.log(inAmount, outAmount,getWeiTokens(toContract, (outAmount - (outAmount * wallet.slippage/100))));
+	outAmount = getReverseWeiTokens((outAmount - (outAmount * wallet.slippage/100)), Math.abs(fromContract.decimals -   toContract.decimals) );//*Math.pow(10,contractPairDecimal);
 	console.log(inAmount, outAmount);
 	var buyResult = await sendBuy(inAmount,outAmount,wallet);
 	if(buyResult.status)
@@ -146,20 +157,28 @@ async function buy(amt)
     }
 	return false;
 }
-
+function getReverseWeiTokens(balance, decimals) {
+    if (!balance || balance == 0) return 0;
+    return balance / Math.pow(10, decimals)
+}
 async function sendBuy(inAmount, outAmount,wallet) {
 	console.log(inAmount,outAmount);
 	var data = wallet.router.methods.swapExactTokensForTokens(
-		web3.utils.toHex(inAmount),
-		web3.utils.toHex(outAmount),
+		web3.utils.toHex(getWeiTokens(fromContract,inAmount)),
+		web3.utils.toHex(Math.floor(getWeiTokens(toContract, outAmount))),
 		[fromContract.address,toContract.address],
         wallet.account,
         web3.utils.toHex(Math.round(Date.now()/1000)+60*10),
     );
 	console.log(Math.round(Date.now()/1000)+60*10);
 	console.log("signing tx");
+	var tValue = 0;
+	if(fromContract.address.trim().toLowerCase() == maticContract.address.trim().toLowerCase())
+	{
+		tValue = getWeiTokens(maticContract, inAmount);
+	}
 	var result = await sendTransaction(wallet.routerAddress,data,
-	  web3.utils.toHex(0));
+	  web3.utils.toHex(tValue));
     return result;
 }
 function getActualTokens(contract,balance)
@@ -182,7 +201,7 @@ function getWeiTokens(contract,balance)
 async function sendTransaction(toAddress,data,transactionValue)
 {
 	try{
-		var count = await web3.eth.getTransactionCount(account);
+		var count = await web3.eth.getTransactionCount(account,'pending');
 		//var latestBlock = await web3.eth.getBlock("latest");
 		var gasPrice = await web3.eth.getGasPrice();
 
